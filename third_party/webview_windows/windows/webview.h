@@ -151,6 +151,9 @@ class Webview {
                         double x, double y, double size, double pressure);
   void SetPointerButtonState(WebviewPointerButton button, bool isDown);
   void SetScrollDelta(double delta_x, double delta_y);
+  // A left click at (x, y), in the same logical pixels as SetCursorPos,
+  // without moving the mouse's own position in the page.
+  void TapAt(double x, double y);
   void LoadUrl(const std::string& url);
   void LoadStringContent(const std::string& content);
   bool Stop();

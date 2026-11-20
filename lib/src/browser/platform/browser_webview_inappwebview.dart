@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -9,7 +10,8 @@ import '../js/js_bridge.dart';
 import 'browser_webview_controller.dart';
 
 /// Android/iOS/macOS implementation backed by `flutter_inappwebview`.
-class BrowserInAppWebViewAdapter implements BrowserWebviewController {
+class BrowserInAppWebViewAdapter
+    implements BrowserWebviewController, NativeTapSupport {
   BrowserInAppWebViewAdapter({
     FindInteractionController? findInteractionController,
     BrowserWebViewHooks? hooks,
@@ -128,6 +130,11 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
   InAppWebViewSettings _buildSettings() {
     return InAppWebViewSettings(
       javaScriptEnabled: true,
+      // Android: when the web view takes the focus outside touch mode (a TV,
+      // the remote's OK), it would focus the page's first field, a search
+      // box say, and that opens the typing box. A field is focused when it
+      // is clicked, nothing else.
+      needInitialFocus: false,
       domStorageEnabled: true,
       databaseEnabled: true,
       cacheEnabled: true,
@@ -285,6 +292,47 @@ class BrowserInAppWebViewAdapter implements BrowserWebviewController {
   @override
   Future<Object?> evaluateJsExpression(String expression) =>
       evaluateJs(expression);
+
+  static const _webviewInput = MethodChannel('com.yourapp/webview_input');
+
+  /// On Android, a real touch at [position] (MainActivity's injectTap, in
+  /// the web view's own physical pixels), so the TV remote's OK is a click
+  /// like a finger's. Not on a text field: the page-script path focuses it
+  /// and opens the app's typing box, where a touch would also bring up the
+  /// system keyboard over it.
+  @override
+  Future<bool> tapAt(Offset position) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return false;
+    }
+    final controller = _controller;
+    if (controller == null) return false;
+    try {
+      final typing = await controller.evaluateJavascript(source: '''
+        (function() {
+          var e = document.elementFromPoint(${position.dx}, ${position.dy});
+          if (!e) return false;
+          if (e.isContentEditable || e.tagName === 'TEXTAREA') return true;
+          if (e.tagName !== 'INPUT') return false;
+          var t = (e.type || 'text').toLowerCase();
+          return ['button', 'checkbox', 'color', 'file', 'image', 'radio',
+                  'range', 'reset', 'submit'].indexOf(t) < 0;
+        })()
+      ''');
+      if (typing == true) return false;
+      final ratio = WidgetsBinding
+              .instance.platformDispatcher.implicitView?.devicePixelRatio ??
+          1.0;
+      await _webviewInput.invokeMethod('injectTap', {
+        'x': position.dx * ratio,
+        'y': position.dy * ratio,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('native tap failed, using the page-script click: $e');
+      return false;
+    }
+  }
 
   @override
   Future<Object?> evaluateJs(String js) async =>

@@ -38,6 +38,7 @@ constexpr auto kMethodSetCursorPos = "setCursorPos";
 constexpr auto kMethodSetPointerUpdate = "setPointerUpdate";
 constexpr auto kMethodSetPointerButton = "setPointerButton";
 constexpr auto kMethodSetScrollDelta = "setScrollDelta";
+constexpr auto kMethodTapAt = "tapAt";
 constexpr auto kMethodSetUserAgent = "setUserAgent";
 constexpr auto kMethodSetRequestBlocking = "setRequestBlocking";
 constexpr auto kMethodSetRequestBlockRules = "setRequestBlockRules";
@@ -493,6 +494,16 @@ void WebviewBridge::HandleMethodCall(
     const auto delta = GetPointFromArgs(method_call.arguments());
     if (delta) {
       webview_->SetScrollDelta(delta->first, delta->second);
+      return result->Success();
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // tapAt: [double x, double y]
+  if (method_name.compare(kMethodTapAt) == 0) {
+    const auto point = GetPointFromArgs(method_call.arguments());
+    if (point) {
+      webview_->TapAt(point->first, point->second);
       return result->Success();
     }
     return result->Error(kErrorInvalidArgs);

@@ -15,7 +15,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
-import '../browser/extensions/content_scripts.dart' show extensionStorageHandler;
+import '../browser/extensions/content_scripts.dart'
+    show extensionStorageHandler;
 import '../browser/extensions/extension_hosts.dart';
 import '../browser/js/js_bridge.dart';
 import '../browser/js/scroll_bridge.dart';
@@ -184,6 +185,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   });
   bool _cursorCallbacksRegistered = false;
+  final GlobalKey _webViewBoxKey = GlobalKey(debugLabel: 'webView');
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
@@ -208,6 +210,10 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   // Pending URL - loaded once the WebView controller is ready.
   String? _pendingUrl;
+  bool _dependenciesReady = false;
+  /// When the remote cursor last clicked the page: a text field focused
+  /// right after opens the typing box.
+  DateTime? _cursorTapAt;
 
   // Timer used to throttle periodic screenshots while video is playing.
   Timer? _playbackScreenshotTimer;
@@ -264,38 +270,51 @@ class _BrowserScreenState extends State<BrowserScreen>
         }
       });
     }
-    try {
-      _findInteractionController = FindInteractionController(
-        onFindResultReceived:
-            (controller, activeMatchOrdinal, numberOfMatches, isDoneCounting) {
-          if (isDoneCounting) {
-            if (mounted) {
-              setState(() {
-                _findMatchCount = numberOfMatches;
-                _findActiveIndex = activeMatchOrdinal;
-              });
+    // Once: this runs again whenever an inherited widget changes (the window
+    // resizing, a dialog opening, the theme or language), and these must not
+    // pile up (listeners added twice, but removed once in dispose) or undo
+    // what the user did since (the new-tab page, the first URL).
+    if (!_dependenciesReady) {
+      _dependenciesReady = true;
+      try {
+        _findInteractionController = FindInteractionController(
+          onFindResultReceived: (controller, activeMatchOrdinal,
+              numberOfMatches, isDoneCounting) {
+            if (isDoneCounting) {
+              if (mounted) {
+                setState(() {
+                  _findMatchCount = numberOfMatches;
+                  _findActiveIndex = activeMatchOrdinal;
+                });
+              }
             }
-          }
-        },
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[BROWSER] FindInteractionController not supported: $e');
+          },
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[BROWSER] FindInteractionController not supported: $e');
+        }
+        _findInteractionController = null;
       }
-      _findInteractionController = null;
+      _videoDetector.addListener(_onVideoDetectorChanged);
+      _castService.addListener(_onCastChanged);
+      _loadPrefs();
+      if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+        _showNewTabPage = false;
+        _pendingUrl = widget.initialUrl;
+      }
     }
-    _videoDetector.addListener(_onVideoDetectorChanged);
-    _castService.addListener(_onCastChanged);
-    _loadPrefs();
-    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
-      _showNewTabPage = false;
-      _pendingUrl = widget.initialUrl;
-    }
-    _publishBrowserLocation();
+    // After this build: the location is shown by widgets elsewhere in the
+    // app, which must not be marked dirty while the framework builds (a
+    // dialog opening, the window resizing and the like land here mid-build).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _publishBrowserLocation();
+    });
   }
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _searchEngine = prefs.getString('browser_search_engine') ?? 'DuckDuckGo';
       _desktopMode = prefs.getBool('browser_desktop_mode') ?? false;
@@ -521,7 +540,16 @@ class _BrowserScreenState extends State<BrowserScreen>
           _resumeCursor();
         } else {
           _pauseCursor();
-          _handleInputFocusMessage(msg);
+          // The typing box is the remote's way to type: only for a field
+          // the cursor's OK chose (on a TV every click is). A field clicked
+          // with the mouse or tapped on a touchscreen takes the keyboard
+          // itself, as in any browser.
+          final tap = _cursorTapAt;
+          if (tap != null &&
+              DateTime.now().difference(tap) < const Duration(seconds: 1)) {
+            _cursorTapAt = null;
+            _handleInputFocusMessage(msg);
+          }
         }
       case 'remoteKey':
         // "ArrowUp:down", "Enter:down", ...: a remote key the page handed
@@ -798,7 +826,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Asks before handing a link to another app. Never launches on its own.
   Future<void> _confirmExternalApp(String url, {String? package}) async {
     if (!mounted) return;
-    final target = package ?? Uri.tryParse(url)?.scheme ?? context.l10n.anotherApp;
+    final target =
+        package ?? Uri.tryParse(url)?.scheme ?? context.l10n.anotherApp;
     final open = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -833,8 +862,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// Userscripts to run on [url]. Document-start scripts go in before the
   /// page's own code; everything else waits for the DOM. The ad blocker's
   /// hiding for the site goes with both and runs once.
-  List<String> _userScriptsFor(String url, {required bool atDocumentStart}) =>
-      [
+  List<String> _userScriptsFor(String url, {required bool atDocumentStart}) => [
         if (_adBlock.siteHideScript(url) case final hide?) hide,
         ..._userScripts.injectionsFor(
           url,
@@ -917,8 +945,22 @@ class _BrowserScreenState extends State<BrowserScreen>
     await _webViewController?.evaluateJs(withJsBridge("""
       if (!window.__cursorListenersInjected) {
         window.__cursorListenersInjected = true;
+        // Only a field the user chose: focused right after a press (mouse,
+        // touch, the remote's OK) or Tab. A page focusing its own search box
+        // as it loads, or again after a search, is not reported: that would
+        // open the typing box on its own, and on Windows take the arrow keys
+        // from the remote cursor.
+        window.__lastUserGestureAt = 0;
+        var markGesture = function() { window.__lastUserGestureAt = Date.now(); };
+        document.addEventListener('pointerdown', markGesture, true);
+        document.addEventListener('mousedown', markGesture, true);
+        document.addEventListener('touchstart', markGesture, true);
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Tab') markGesture();
+        }, true);
         document.addEventListener('focusin', function(e) {
           try {
+            if (Date.now() - window.__lastUserGestureAt > 600) return;
             var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
             var kind = 'input';
             if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
@@ -934,7 +976,6 @@ class _BrowserScreenState extends State<BrowserScreen>
                 : (e.target.isContentEditable ? (e.target.innerText || '') : (e.target.value || ''));
               window.__bbCall('InputFocusChannel', JSON.stringify({ value: val, kind: kind }));
             }
-          }
         } catch(ex){}
       });
       document.addEventListener('focusout', function(e) {
@@ -976,11 +1017,21 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<void> _injectTap(Offset position) async {
     if (!_pageUnderCursor) return;
+    final point = _pagePoint(position);
+    if (point == null) return;
+    _cursorTapAt = DateTime.now();
+    if (_webViewController case final NativeTapSupport native) {
+      try {
+        if (await native.tapAt(point)) return;
+      } catch (e) {
+        debugPrint('tapAt failed: $e');
+      }
+    }
     try {
       await _webViewController?.evaluateJs(withJsBridge("""
         (function() {
-          var x = ${position.dx};
-          var y = ${position.dy};
+          var x = ${point.dx};
+          var y = ${point.dy};
           var el = document.elementFromPoint(x, y);
           if (!el) return;
           // Walk up to find the nearest clickable ancestor
@@ -996,14 +1047,14 @@ class _BrowserScreenState extends State<BrowserScreen>
             target = target.parentElement;
           }
           if (!target || target === document.body) target = el;
-          // Dispatch full pointer event sequence
-          var rect = target.getBoundingClientRect();
-          var cx = rect.left + rect.width / 2;
-          var cy = rect.top + rect.height / 2;
+          // The full pointer sequence, where the cursor is (the middle of a
+          // large element, a video or a map, is somewhere else entirely).
           ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(type) {
-            target.dispatchEvent(new MouseEvent(type, {
-              bubbles: true, cancelable: true,
-              clientX: cx, clientY: cy, view: window
+            var Ev = type.indexOf('pointer') === 0 && window.PointerEvent
+              ? PointerEvent : MouseEvent;
+            target.dispatchEvent(new Ev(type, {
+              bubbles: true, cancelable: true, view: window,
+              clientX: x, clientY: y, pointerType: 'mouse', isPrimary: true
             }));
           });
           // Special handling for inputs
@@ -1034,7 +1085,10 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   Future<bool> _injectScroll(double deltaY, Offset cursorPosition) async {
     if (!_pageUnderCursor) return false;
-    await _scroller.scroll(deltaY, cursorPosition);
+    // At the cursor's place in the page (the window's point would be off by
+    // the toolbar above the page); the page itself when it is off the page.
+    final point = _pagePoint(cursorPosition) ?? Offset.zero;
+    await _scroller.scroll(deltaY, point);
     return true;
   }
 
@@ -1142,11 +1196,6 @@ class _BrowserScreenState extends State<BrowserScreen>
   }) {
     if (_typingOverlayVisible) return;
     _typingOverlayVisible = true;
-    final controller = TextEditingController(text: currentValue);
-    controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: currentValue.length,
-    );
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1157,49 +1206,27 @@ class _BrowserScreenState extends State<BrowserScreen>
             await _webviewInputChannel.invokeMethod('dismissIME');
           } catch (_) {}
           _typingOverlayVisible = false;
-          Navigator.of(dialogContext).pop();
+          if (dialogContext.mounted) Navigator.of(dialogContext).pop();
           _resumeCursor();
         }
 
-        return AlertDialog(
-          backgroundColor: Colors.black87,
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: context.l10n.typeHere,
-              hintStyle: const TextStyle(color: Colors.white38),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                onPressed: () => submitInput(controller.text),
-              ),
-            ),
-            onSubmitted: submitInput,
-          ),
-          actions: [
-            ElevatedButton.icon(
-              onPressed: () async => submitInput(controller.text),
-              icon: const Icon(Icons.arrow_forward),
-              label: Text(context.l10n.submit),
-            ),
-            TextButton(
-              onPressed: () async {
-                await _blurWebViewInput();
-                try {
-                  await _webviewInputChannel.invokeMethod('dismissIME');
-                } catch (_) {}
-                _typingOverlayVisible = false;
-                Navigator.of(dialogContext).pop();
-                _resumeCursor();
-              },
-              child:
-                  Text(context.l10n.actionCancel, style: const TextStyle(color: Colors.white70)),
-            ),
-          ],
+        Future<void> cancel() async {
+          await _blurWebViewInput();
+          try {
+            await _webviewInputChannel.invokeMethod('dismissIME');
+          } catch (_) {}
+          _typingOverlayVisible = false;
+          if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+          _resumeCursor();
+        }
+
+        return _TypingDialog(
+          initialValue: currentValue,
+          onSubmit: submitInput,
+          onCancel: cancel,
         );
       },
-    ).then((_) => controller.dispose());
+    );
   }
 
   // -- Actions --
@@ -1371,7 +1398,8 @@ class _BrowserScreenState extends State<BrowserScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(context.l10n.addedQueue), duration: const Duration(seconds: 1)),
+            content: Text(context.l10n.addedQueue),
+            duration: const Duration(seconds: 1)),
       );
     }
   }
@@ -1394,8 +1422,7 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// fields are filled from the video when it downloads.
   Future<({String? title, String? author})> _youTubeMetadata(String id) async {
     try {
-      var data =
-          await _webViewController?.evaluateJsExpression(_playerDataJs);
+      var data = await _webViewController?.evaluateJsExpression(_playerDataJs);
       for (var i = 0; i < 2 && data is String; i++) {
         data = jsonDecode(data);
       }
@@ -1411,15 +1438,20 @@ class _BrowserScreenState extends State<BrowserScreen>
       }
     } catch (_) {}
     try {
-      final response = await http.get(Uri.https('www.youtube.com', '/oembed', {
-        'url': 'https://www.youtube.com/watch?v=$id',
-        'format': 'json',
-      })).timeout(const Duration(seconds: 6));
+      final response = await http
+          .get(Uri.https('www.youtube.com', '/oembed', {
+            'url': 'https://www.youtube.com/watch?v=$id',
+            'format': 'json',
+          }))
+          .timeout(const Duration(seconds: 6));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final title = (data['title'] as String?)?.trim();
         if (title != null && title.isNotEmpty) {
-          return (title: title, author: (data['author_name'] as String?)?.trim());
+          return (
+            title: title,
+            author: (data['author_name'] as String?)?.trim()
+          );
         }
       }
     } catch (_) {}
@@ -1720,7 +1752,18 @@ class _BrowserScreenState extends State<BrowserScreen>
     _createWebviewAdapter();
     final controller = _webViewController;
     if (controller == null) return _buildPlatformUnavailable();
-    return controller.buildWidget();
+    return KeyedSubtree(key: _webViewBoxKey, child: controller.buildWidget());
+  }
+
+  /// Where [global] (a point of the app's window, as the TV-remote cursor
+  /// gives it) is in the page: logical pixels from the web view's top-left
+  /// corner, which are the page's CSS pixels (the browser never zooms).
+  /// Null when the point is not over the web view.
+  Offset? _pagePoint(Offset global) {
+    final box = _webViewBoxKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    final local = box.globalToLocal(global);
+    return (Offset.zero & box.size).contains(local) ? local : null;
   }
 
   Widget _buildPlatformUnavailable() {
@@ -2321,6 +2364,75 @@ class _TabSwitcherSheetState extends State<_TabSwitcherSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+/// The TV typing box for a text field in the page. It owns its text
+/// controller, so the controller lives until the box has finished closing
+/// (disposing it when the dialog's future completes is too early: the box is
+/// still on screen, animating out, and uses it).
+class _TypingDialog extends StatefulWidget {
+  const _TypingDialog({
+    required this.initialValue,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  final String initialValue;
+  final Future<void> Function(String value) onSubmit;
+  final Future<void> Function() onCancel;
+
+  @override
+  State<_TypingDialog> createState() => _TypingDialogState();
+}
+
+class _TypingDialogState extends State<_TypingDialog> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  )..selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initialValue.length,
+    );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.black87,
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: context.l10n.typeHere,
+          hintStyle: const TextStyle(color: Colors.white38),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            onPressed: () => widget.onSubmit(_controller.text),
+          ),
+        ),
+        onSubmitted: widget.onSubmit,
+      ),
+      actions: [
+        ElevatedButton.icon(
+          onPressed: () => widget.onSubmit(_controller.text),
+          icon: const Icon(Icons.arrow_forward),
+          label: Text(context.l10n.submit),
+        ),
+        TextButton(
+          onPressed: widget.onCancel,
+          child: Text(
+            context.l10n.actionCancel,
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ),
+      ],
     );
   }
 }

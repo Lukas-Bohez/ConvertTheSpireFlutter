@@ -20,6 +20,7 @@ import android.os.Environment
 import android.media.MediaScannerConnection
 import android.util.Rational
 import android.graphics.Color
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.inputmethod.InputMethodManager
 import android.os.SystemClock
@@ -516,24 +517,29 @@ class MainActivity : AudioServiceActivity() {
                         }
 
                         Log.d("CursorBridge", "injectTap x=$x y=$y url=${webView?.url}")
+                        // A finger's touch, from the touchscreen: without the
+                        // tool type and source the page sees a pointer of no
+                        // kind (pointerType ""), which some sites skip.
                         val downTime = SystemClock.uptimeMillis()
-                        val down = MotionEvent.obtain(
-                            downTime,
-                            downTime,
-                            MotionEvent.ACTION_DOWN,
-                            x,
-                            y,
-                            0
-                        )
-                        val up = MotionEvent.obtain(
-                            downTime,
-                            downTime + 100,
-                            MotionEvent.ACTION_UP,
-                            x,
-                            y,
-                            0
-                        )
-
+                        fun touch(action: Int, time: Long): MotionEvent {
+                            val props = arrayOf(MotionEvent.PointerProperties().apply {
+                                id = 0
+                                toolType = MotionEvent.TOOL_TYPE_FINGER
+                            })
+                            val coords = arrayOf(MotionEvent.PointerCoords().apply {
+                                this.x = x
+                                this.y = y
+                                pressure = 1f
+                                size = 1f
+                            })
+                            return MotionEvent.obtain(
+                                downTime, time, action, 1, props, coords,
+                                0, 0, 1f, 1f, 0, 0,
+                                InputDevice.SOURCE_TOUCHSCREEN, 0
+                            )
+                        }
+                        val down = touch(MotionEvent.ACTION_DOWN, downTime)
+                        val up = touch(MotionEvent.ACTION_UP, downTime + 100)
                         webView.post {
                             webView.dispatchTouchEvent(down)
                             webView.dispatchTouchEvent(up)

@@ -655,6 +655,16 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     return _methodChannel.invokeMethod('setScrollDelta', [dx, dy]);
   }
 
+  /// A real left click at [position], in logical pixels from the web
+  /// view's top-left corner. The mouse's own position in the page stays.
+  Future<void> tapAt(Offset position) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    return _methodChannel.invokeMethod('tapAt', [position.dx, position.dy]);
+  }
+
   /// Sets the surface size to the provided [size].
   Future<void> _setSize(Size size, double scaleFactor) async {
     if (_isDisposed) {
@@ -748,10 +758,15 @@ class _WebviewState extends State<Webview> {
                     onPointerHover: (ev) {
                       // ev.kind is for whatever reason not set to touch
                       // even on touch input
-                      if (_pointerKind == PointerDeviceKind.touch) {
+                      if (_pointerKind == PointerDeviceKind.touch &&
+                          ev.kind != PointerDeviceKind.mouse) {
                         // Ignoring hover events on touch for now
                         return;
                       }
+                      // A real mouse again after a touch (the app's
+                      // TV-remote cursor taps as touch): follow it, or the
+                      // page stopped seeing the mouse until its next click.
+                      _pointerKind = ev.kind;
                       _controller._setCursorPos(ev.localPosition);
                     },
                     onPointerDown: (ev) {

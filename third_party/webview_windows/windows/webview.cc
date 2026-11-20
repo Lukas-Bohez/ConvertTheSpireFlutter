@@ -722,6 +722,32 @@ void Webview::SendScroll(double delta, bool horizontal) {
       virtual_keys_.state(), offset, point);
 }
 
+void Webview::TapAt(double x, double y) {
+  if (!IsValid()) return;
+  // Through DevTools, as the wheel: input sent with SendPointerInput (touch)
+  // never reaches the page with the hidden parent window, and a DevTools
+  // click is a real, trusted one at exactly this point.
+  double zoom = 1.0;
+  if (FAILED(webview_controller_->get_ZoomFactor(&zoom)) || zoom <= 0) {
+    zoom = 1.0;
+  }
+  const double cx = x / zoom;
+  const double cy = y / zoom;
+  const wchar_t* kinds[] = {L"mouseMoved", L"mousePressed", L"mouseReleased"};
+  for (const wchar_t* kind : kinds) {
+    const bool moved = std::wstring(kind) == L"mouseMoved";
+    const bool pressed = std::wstring(kind) == L"mousePressed";
+    const std::wstring params = std::format(
+        L"{{\"type\":\"{}\",\"x\":{:.2f},\"y\":{:.2f},"
+        L"\"button\":\"{}\",\"buttons\":{},\"clickCount\":{},"
+        L"\"pointerType\":\"mouse\"}}",
+        kind, cx, cy, moved ? L"none" : L"left", pressed ? 1 : 0,
+        moved ? 0 : 1);
+    webview_->CallDevToolsProtocolMethod(L"Input.dispatchMouseEvent",
+                                         params.c_str(), nullptr);
+  }
+}
+
 void Webview::SetScrollDelta(double delta_x, double delta_y) {
   if (!IsValid() || (delta_x == 0.0 && delta_y == 0.0)) {
     return;

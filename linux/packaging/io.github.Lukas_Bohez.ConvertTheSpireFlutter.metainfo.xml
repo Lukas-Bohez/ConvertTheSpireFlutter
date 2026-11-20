@@ -74,8 +74,9 @@
       <description>
         <p>
           The mouse wheel scrolls web pages in the browser again, and the arrow keys
-          move the remote-control cursor even after a page was clicked. The app has
-          a new icon.
+          move the remote-control cursor even after a page was clicked. The remote's
+          OK clicks like a real mouse click, where the cursor is. The app has a new
+          icon.
         </p>
       </description>
     </release>

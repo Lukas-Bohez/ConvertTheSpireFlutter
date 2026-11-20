@@ -112,6 +112,17 @@ abstract class BrowserWebviewController {
 }
 
 /// What the ad blocker hands a webview.
+/// A web view that clicks with real input at a point of the page (the
+/// TV-remote cursor's OK), rather than the page-script click every web view
+/// can do: browsers ignore a script's click for whatever needs a person to
+/// have clicked (playing a video, full screen, a popup), and many sites
+/// ignore it altogether. [tapAt] takes logical pixels from the view's
+/// top-left corner and returns false when the page-script click should be
+/// used instead.
+abstract class NativeTapSupport {
+  Future<bool> tapAt(Offset position);
+}
+
 class ContentBlocking {
   ContentBlocking({
     required this.id,

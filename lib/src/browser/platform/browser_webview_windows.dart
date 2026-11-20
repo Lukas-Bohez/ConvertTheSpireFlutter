@@ -21,7 +21,8 @@ import 'webview2_environment.dart';
 ///  - No incremental load progress (0 at start, 1 on completion).
 ///  - No tab-preview screenshots (`takeScreenshot` always returns null).
 ///  - Incognito mode is a no-op (WebView2 shares one profile).
-class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
+class BrowserWindowsWebViewAdapter
+    implements BrowserWebviewController, NativeTapSupport {
   BrowserWindowsWebViewAdapter({
     BrowserWebViewHooks? hooks,
     WebviewController Function()? controllerFactory,
@@ -59,6 +60,7 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   final ValueNotifier<int> _generation = ValueNotifier<int>(0);
   Future<void>? _readyFuture;
   bool _initializing = false;
+  static final Object _initZoneKey = Object();
   bool _desktopMode = false;
   String _lastUrl = '';
   String _lastTitle = '';
@@ -91,17 +93,27 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
   /// instead of poisoning the browser for the whole session.
   Future<void> _ensureReady() async {
     if (_initState.value == true) return;
-    if (_initializing && _native.value.isInitialized) {
+    if (_initializing &&
+        _native.value.isInitialized &&
+        identical(Zone.current[_initZoneKey], this)) {
       // Re-entered from _init()'s own post-init setup (the
       // _init -> applySettings -> _ensureReady chain): the controller is
       // already initialized, and awaiting the in-flight _init() future here
       // would deadlock ("Future awaited itself"). Let the caller proceed;
       // the outer _ensureReady finalizes _initState when _init() returns.
+      //
+      // Only _init's own calls, recognised by its zone: anyone else (the
+      // browser loading its first page) waits for the setup to finish. Let
+      // through as soon as the controller existed, a page loaded before the
+      // document-start scripts were in, so the remote's Enter went to the
+      // page instead of clicking, and the user agent and the ad blocker
+      // might not be applied yet either.
       return;
     }
     _initState.value = null;
     _initError.value = null;
-    final future = _readyFuture ??= _init();
+    final future = _readyFuture ??=
+        runZoned(_init, zoneValues: {_initZoneKey: this});
     try {
       await future;
       _initState.value = true;
@@ -251,6 +263,17 @@ class BrowserWindowsWebViewAdapter implements BrowserWebviewController {
     ];
     await _native.initialize();
     await _setRemoteKeys(true);
+  }
+
+  /// A real click at [position] (logical pixels from the view's top-left
+  /// corner): the TV-remote cursor's OK. WebView2 never delivers the touch
+  /// Flutter passes on, and a click made by page script is not a trusted
+  /// one, which many sites ignore.
+  @override
+  Future<bool> tapAt(Offset position) async {
+    if (!_native.value.isInitialized) return false;
+    await _native.tapAt(position);
+    return true;
   }
 
   static const _remoteKeyNames = {
