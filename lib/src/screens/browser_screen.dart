@@ -15,8 +15,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../browser/adblock/adblock_service.dart';
 import '../browser/cast/cast_service.dart';
 import '../browser/cast/unified_cast_service.dart';
+import '../browser/extensions/content_scripts.dart' show extensionStorageHandler;
 import '../browser/extensions/extension_hosts.dart';
 import '../browser/js/js_bridge.dart';
+import '../browser/js/scroll_bridge.dart';
 import '../browser/platform/browser_webview_controller.dart';
 import '../browser/platform/browser_webview_factory.dart';
 import '../browser/tabs/tab_manager.dart';
@@ -32,7 +34,7 @@ import '../utils/screenshot_helper.dart';
 import '../utils/snack.dart';
 import '../utils/youtube_link.dart';
 import '../widgets/browser_shell.dart';
-import '../widgets/cursor_overlay.dart';
+import '../widgets/global_cursor_overlay.dart';
 import '../widgets/video_or_playlist_dialog.dart';
 import 'browser/browser_bottom_bar.dart';
 import 'browser/browser_chrome.dart';
@@ -74,9 +76,16 @@ class BrowserScreen extends StatefulWidget {
   /// the download button then takes just the video.
   final void Function(String playlistUrl)? onDownloadPlaylist;
 
+  /// Whether this is the tab on screen. Home keeps the tab built when
+  /// another one is open (an IndexedStack does not pause what it hides), so
+  /// only Home can say; the cursor's clicks and scrolling go to the page
+  /// only while it is true.
+  final bool isActive;
+
   const BrowserScreen({
     super.key,
     this.initialUrl,
+    this.isActive = true,
     void Function(SearchResult result)? onAddToQueue,
     this.onDownloadPlaylist,
   }) : onAddToQueue = onAddToQueue ?? _noopOnAddToQueue;
@@ -167,7 +176,14 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   BrowserWebviewController? _webViewController;
   final List<StreamSubscription> _webviewSubs = [];
-  bool _cursorActive = false;
+  late final WebViewScroller _scroller = WebViewScroller((script) async {
+    try {
+      await _webViewController?.evaluateJs(withJsBridge(script));
+    } catch (e) {
+      debugPrint('injectScroll failed: $e');
+    }
+  });
+  bool _cursorCallbacksRegistered = false;
   FindInteractionController? _findInteractionController;
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _findController = TextEditingController();
@@ -205,8 +221,8 @@ class _BrowserScreenState extends State<BrowserScreen>
 
   /// True when the platform supports an in-app WebView.
   /// Web is supported via flutter_inappwebview's iframe-based adapter.
-  /// Linux is not supported (no reliable WebView backend).
-  bool get _webViewSupported => !Platform.isLinux;
+  /// Linux runs Chromium through webview_cef (see BrowserCefWebViewAdapter).
+  bool get _webViewSupported => true;
 
   @override
   void initState() {
@@ -215,6 +231,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _adBlock.addListener(_pushContentBlocking);
     _adBlock.init();
     unawaited(_userScripts.init());
+    unawaited(ExtensionHosts.contentScripts?.warmUp());
     _castService.startDiscovery();
     _castBadgeController = AnimationController(
       vsync: this,
@@ -225,12 +242,14 @@ class _BrowserScreenState extends State<BrowserScreen>
       // requests still land once the browser state is ready.
       if (mounted) _consumePendingUrl();
     });
+    _syncCursorCallbacks();
   }
 
   @override
   void didUpdateWidget(covariant BrowserScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     _consumePendingUrl();
+    _syncCursorCallbacks();
   }
 
   @override
@@ -346,6 +365,9 @@ class _BrowserScreenState extends State<BrowserScreen>
     _webviewSubs.clear();
     unawaited(_webViewController?.dispose());
     _webViewController = null;
+    if (_cursorCallbacksRegistered) {
+      GlobalCursorOverlay.registerWebViewCallbacks();
+    }
     if (BrowserScreen.currentLocation.value != null) {
       BrowserScreen.currentLocation.value = null;
     }
@@ -512,6 +534,8 @@ class _BrowserScreenState extends State<BrowserScreen>
         if (message.payload.isNotEmpty) {
           _navigateTo(message.payload);
         }
+      case extensionStorageHandler:
+        ExtensionHosts.contentScripts?.handleStorageMessage(message.payload);
       case 'onDownloadStart':
         final url = message.payload;
         if (url.isNotEmpty) {
@@ -636,11 +660,6 @@ class _BrowserScreenState extends State<BrowserScreen>
     try {
       await _injectInputFocusListeners();
     } catch (_) {}
-
-    // Enable cursor mode for this screen once page has finished loading.
-    if (mounted && !_cursorActive) {
-      setState(() => _cursorActive = true);
-    }
 
     // Inject popup blocker when ad-block is on.
     if (_adBlock.adBlockEnabled) {
@@ -805,6 +824,10 @@ class _BrowserScreenState extends State<BrowserScreen>
               ? UserScriptRunAt.documentStart
               : UserScriptRunAt.documentEnd,
         ),
+        // Extensions where the engine cannot host them run their page
+        // scripts this way (Android, TV, iOS, macOS, Linux).
+        ...?ExtensionHosts.contentScripts
+            ?.injectionsFor(url, atDocumentStart: atDocumentStart),
       ];
 
   static bool _looksLikeUserScriptUrl(String url) {
@@ -901,36 +924,40 @@ class _BrowserScreenState extends State<BrowserScreen>
           window.__bbCall('InputFocusChannel', '__blur__');
         } catch(ex){}
       });
-        if (!window.__keyBlocker) {
-          window.__keyBlocker = true;
-          document.addEventListener('keydown', function(e) {
-            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.key)) {
-              e.preventDefault(); e.stopImmediatePropagation();
-            }
-          }, true);
-        }
       }
     """));
   }
 
-  void _pauseCursor() {
-    if (!mounted) return;
-    if (_cursorActive) {
-      setState(() => _cursorActive = false);
-    }
-    // Cursor is now always active (global mode); no need to toggle
-  }
+  // The cursor belongs to GlobalCursorOverlay and is always on; it stands
+  // aside by itself while a text field has focus. Pausing is therefore a
+  // no-op, and resuming only closes the keyboard.
+  void _pauseCursor() {}
 
   void _resumeCursor() {
     if (!mounted || _webViewController == null) return;
     _inputChannel('dismissIME');
-    if (!_cursorActive) {
-      setState(() => _cursorActive = true);
+  }
+
+  /// Hands the page the cursor's clicks and scrolling while the browser tab
+  /// is the one on screen. The tab stays built (in an IndexedStack) when
+  /// another tab is open, and must not take the cursor's scrolling from that
+  /// tab's own lists.
+  void _syncCursorCallbacks() {
+    final shown = widget.isActive;
+    if (shown == _cursorCallbacksRegistered) return;
+    _cursorCallbacksRegistered = shown;
+    if (shown) {
+      GlobalCursorOverlay.registerWebViewCallbacks(
+        onTap: _injectTap,
+        onScroll: _injectScroll,
+      );
+    } else {
+      GlobalCursorOverlay.registerWebViewCallbacks();
     }
-    // Cursor is now always active (global mode); no need to toggle
   }
 
   Future<void> _injectTap(Offset position) async {
+    if (!_pageUnderCursor) return;
     try {
       await _webViewController?.evaluateJs(withJsBridge("""
         (function() {
@@ -979,24 +1006,18 @@ class _BrowserScreenState extends State<BrowserScreen>
     }
   }
 
-  Future<void> _injectScroll(double deltaY, Offset cursorPosition) async {
-    try {
-      await _webViewController?.evaluateJs(withJsBridge("""
-        (function() {
-          var el = document.elementFromPoint(${cursorPosition.dx}, ${cursorPosition.dy});
-          while (el && el !== document.body) {
-            var style = window.getComputedStyle(el);
-            var canScroll = (style.overflowY === 'scroll' || style.overflowY === 'auto')
-                            && el.scrollHeight > el.clientHeight;
-            if (canScroll) { el.scrollTop += $deltaY; return; }
-            el = el.parentElement;
-          }
-          window.scrollBy(0, $deltaY);
-        })();
-      """));
-    } catch (e) {
-      debugPrint('injectScroll failed: $e');
-    }
+  /// Whether the cursor is over the page: not the new-tab page, and not
+  /// under a dialog or sheet opened from here.
+  bool get _pageUnderCursor =>
+      mounted &&
+      !_showNewTabPage &&
+      _webViewController != null &&
+      (ModalRoute.of(context)?.isCurrent ?? true);
+
+  Future<bool> _injectScroll(double deltaY, Offset cursorPosition) async {
+    if (!_pageUnderCursor) return false;
+    await _scroller.scroll(deltaY, cursorPosition);
+    return true;
   }
 
   Future<void> _injectTextAndSubmit(String value) async {
@@ -1355,7 +1376,8 @@ class _BrowserScreenState extends State<BrowserScreen>
   /// fields are filled from the video when it downloads.
   Future<({String? title, String? author})> _youTubeMetadata(String id) async {
     try {
-      var data = await _webViewController?.evaluateJs(_playerDataJs);
+      var data =
+          await _webViewController?.evaluateJsExpression(_playerDataJs);
       for (var i = 0; i < 2 && data is String; i++) {
         data = jsonDecode(data);
       }
@@ -1680,12 +1702,7 @@ class _BrowserScreenState extends State<BrowserScreen>
     _createWebviewAdapter();
     final controller = _webViewController;
     if (controller == null) return _buildPlatformUnavailable();
-    return CursorOverlay(
-      active: _cursorActive,
-      onTap: (pos) async => await _injectTap(pos),
-      onScroll: (dy, pos) async => await _injectScroll(dy, pos),
-      child: controller.buildWidget(),
-    );
+    return controller.buildWidget();
   }
 
   Widget _buildPlatformUnavailable() {

@@ -4034,6 +4034,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tiện ích Firefox chạy được ở đây nếu cũng hỗ trợ Chromium. Ứng dụng sẽ kiểm tra sau khi tải và báo cho bạn nếu không.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Trên thiết bị này, tiện ích chạy các tập lệnh và kiểu mà nó thêm vào trang web, và giữ cài đặt của nó. Cửa sổ bật lên trên thanh công cụ, công việc nền và chặn mạng cần một bộ máy trình duyệt máy tính, có trong ứng dụng Windows.';
+
+  @override
   String get more3 => ' và thêm nữa';
 
   @override

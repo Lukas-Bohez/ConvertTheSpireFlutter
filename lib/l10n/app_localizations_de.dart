@@ -4066,6 +4066,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Firefox-Erweiterungen laufen hier, wenn sie auch Chromium unterstützen. Die App prüft das nach dem Download und sagt dir Bescheid, falls nicht.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Auf diesem Gerät führt eine Erweiterung die Skripte und Stile aus, die sie Webseiten hinzufügt, und behält ihre Einstellungen. Ihr Symbolleisten-Pop-up, Hintergrundaufgaben und Netzwerkblockierung brauchen eine Desktop-Browser-Engine, die die Windows-App hat.';
+
+  @override
   String get more3 => ' und mehr';
 
   @override

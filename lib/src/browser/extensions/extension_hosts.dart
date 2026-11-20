@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import 'content_script_extension_host.dart';
 import 'web_extension_host.dart';
 import 'webview2_extension_host.dart';
 
@@ -15,11 +16,23 @@ class ExtensionHosts {
   static WebExtensionHost get current => _current ??= _create();
 
   static WebExtensionHost _create() {
-    if (!kIsWeb && Platform.isWindows) return WebView2ExtensionHost();
-    // Android and Android TV get extensions through GeckoView, which ships
-    // in a later sideload build (issue #10). The Play build never will.
-    return const UnsupportedExtensionHost(
-        'Browser extensions currently work in the Windows app only.');
+    if (kIsWeb) {
+      return const UnsupportedExtensionHost(
+          'Browser extensions do not run in the web version.');
+    }
+    // Windows runs the whole extension in WebView2's own extension host.
+    if (Platform.isWindows) return WebView2ExtensionHost();
+    // Everywhere else (Android, Android TV, iOS, macOS, Linux) the web view
+    // has no extension engine, so the app runs an extension's page scripts
+    // and styles itself.
+    return ContentScriptExtensionHost();
+  }
+
+  /// The host that injects extension page scripts, when this platform uses
+  /// one; null on Windows, where the engine does it.
+  static ContentScriptExtensionHost? get contentScripts {
+    final host = current;
+    return host is ContentScriptExtensionHost ? host : null;
   }
 
   /// Whether to show extension entry points at all. Platforms without an

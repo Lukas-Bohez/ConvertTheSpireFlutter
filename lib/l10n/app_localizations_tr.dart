@@ -4048,6 +4048,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Firefox uzantıları Chromium\'u da destekliyorsa burada çalışır. Uygulama indirdikten sonra bunu denetler ve desteklemiyorsa haber verir.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Bu cihazda bir uzantı, web sayfalarına eklediği betikleri ve stilleri çalıştırır ve ayarlarını saklar. Araç çubuğu açılır penceresi, arka plan işleri ve ağ engelleme, Windows uygulamasında bulunan bir masaüstü tarayıcı motoru gerektirir.';
+
+  @override
   String get more3 => ' ve daha fazlası';
 
   @override

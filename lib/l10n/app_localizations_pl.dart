@@ -4053,6 +4053,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Rozszerzenia Firefox działają tutaj, jeśli obsługują też Chromium. Aplikacja sprawdza to po pobraniu i poinformuje cię, jeśli nie.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Na tym urządzeniu rozszerzenie uruchamia skrypty i style, które dodaje do stron, i zachowuje swoje ustawienia. Okienko na pasku narzędzi, praca w tle i blokowanie sieci wymagają silnika przeglądarki na komputer, który ma aplikacja dla Windows.';
+
+  @override
   String get more3 => ' i nie tylko';
 
   @override

@@ -160,6 +160,10 @@ class BrowserWebWebViewAdapter implements BrowserWebviewController {
   Future<String?> getTitle() async => await _controller?.getTitle();
 
   @override
+  Future<Object?> evaluateJsExpression(String expression) =>
+      evaluateJs(expression);
+
+  @override
   Future<Object?> evaluateJs(String js) async =>
       await _controller?.evaluateJavascript(source: js);
 

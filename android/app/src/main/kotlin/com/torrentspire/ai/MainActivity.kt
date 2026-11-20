@@ -605,72 +605,42 @@ class MainActivity : AudioServiceActivity() {
 
     }
 
+    private val isTelevision: Boolean by lazy {
+        val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+        uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION
+    }
+
+    // On a TV the remote drives the app's on-screen cursor, so its keys go to
+    // Flutter and nowhere else. On a phone or tablet they are left alone:
+    // taking them there meant a hardware keyboard's Enter and arrow keys never
+    // reached a web page or a text field.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
-                    Log.d(
-                        "CursorBridge",
-                        "dispatchKeyEvent: keyCode=${event.keyCode} channel=${keyEventChannel != null} action=${event.action}"
-                    )
-                    keyEventChannel?.invokeMethod("onDpadKey", mapOf(
-                        "keyCode" to event.keyCode,
-                        "action" to if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"
-                    ))
+        if (isTelevision) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                // Scroll a screenful: page up / down and channel up / down.
+                KeyEvent.KEYCODE_PAGE_UP,
+                KeyEvent.KEYCODE_PAGE_DOWN,
+                KeyEvent.KEYCODE_CHANNEL_UP,
+                KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+                    if (event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP) {
+                        keyEventChannel?.invokeMethod("onDpadKey", mapOf(
+                            "keyCode" to event.keyCode,
+                            "action" to if (event.action == KeyEvent.ACTION_DOWN) "down" else "up"
+                        ))
+                    }
+                    return true
                 }
-                return true
             }
         }
         return super.dispatchKeyEvent(event)
     }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                Log.d("CursorBridge", "onKeyDown: keyCode=$keyCode channel=${keyEventChannel != null}")
-                keyEventChannel?.invokeMethod("onDpadKey", mapOf(
-                    "keyCode" to keyCode,
-                    "action" to "down"
-                ))
-                return true
-            }
-        }
-        return super.onKeyDown(keyCode, event)
-    }
-
-    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP,
-            KeyEvent.KEYCODE_DPAD_DOWN,
-            KeyEvent.KEYCODE_DPAD_LEFT,
-            KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                Log.d("CursorBridge", "onKeyUp: keyCode=$keyCode channel=${keyEventChannel != null}")
-                keyEventChannel?.invokeMethod("onDpadKey", mapOf(
-                    "keyCode" to keyCode,
-                    "action" to "up"
-                ))
-                return true
-            }
-        }
-        return super.onKeyUp(keyCode, event)
-    }
-
-
 
     private fun findWebView(view: View): WebView? {
         if (view is WebView) {

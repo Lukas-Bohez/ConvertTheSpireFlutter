@@ -163,6 +163,13 @@ jobs:
           version: '3.41.2'
           cache: true
 
+      # The Linux build downloads Chromium (CEF, about 660 MB) on its first run.
+      - name: Cache Chromium (CEF)
+        uses: actions/cache@v4
+        with:
+          path: third_party/webview_cef/third/cef
+          key: cef-${{ hashFiles('third_party/webview_cef/third/download.cmake') }}
+
       - name: Install dependencies
         run: flutter pub get
 

@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Ekstensi tidak tersedia di sesi ini: salinan lain aplikasi ini sudah lebih dulu membuka peramban. Tutup semua salinan lalu buka aplikasi lagi.",
   "extensionLabel": "ekstensi ini",
   "firefoxExtensionsRunHereWhen": "Ekstensi Firefox berjalan di sini jika juga mendukung Chromium. Aplikasi memeriksanya setelah mengunduh dan memberi tahu jika tidak.",
+  "extensionsRunPageScriptsHere": "Di perangkat ini, ekstensi menjalankan skrip dan gaya yang ditambahkannya ke halaman web, dan menyimpan pengaturannya. Pop-up bilah alat, pekerjaan latar belakang, dan pemblokiran jaringan memerlukan mesin browser desktop, yang ada di aplikasi Windows.",
   "more3": " dan lainnya",
   "installedFromFile": "dipasang dari file",
   "today": "Hari ini",

@@ -5,7 +5,7 @@ description: >-
   All-in-one media app: download from 1800+ sites, convert 27+ formats,
   play, cast to DLNA/UPnP, and download torrents.
 publish_to: 'none'
-version: 16.3.1+1309
+version: 16.4.0+1310
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -93,6 +93,9 @@ dependencies:
   go_router: ^17.2.0
   webview_windows:
     path: third_party/webview_windows
+  # Chromium for the Linux browser; vendored so it registers on Linux only.
+  webview_cef:
+    path: third_party/webview_cef
   video_thumbnail: 0.5.6
   qr: ^3.0.2
   cryptography: ^2.9.0

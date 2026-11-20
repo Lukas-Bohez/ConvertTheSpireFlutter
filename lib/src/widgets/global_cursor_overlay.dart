@@ -17,12 +17,16 @@ class GlobalCursorOverlay extends StatefulWidget {
   final Widget child;
 
   static Future<void> Function(Offset position)? _webViewTapCallback;
-  static Future<void> Function(double deltaY, Offset position)?
+  static Future<bool> Function(double deltaY, Offset position)?
       _webViewScrollCallback;
 
+  /// Lets a WebView take the cursor's clicks and scrolling. [onScroll]
+  /// returns false when the page is not what the cursor is over (the new-tab
+  /// page, a dialog), and the scroll then goes to the Flutter widget there.
+  /// Call without arguments to take the callbacks back.
   static void registerWebViewCallbacks({
     Future<void> Function(Offset position)? onTap,
-    Future<void> Function(double deltaY, Offset position)? onScroll,
+    Future<bool> Function(double deltaY, Offset position)? onScroll,
   }) {
     _webViewTapCallback = onTap;
     _webViewScrollCallback = onScroll;
@@ -58,7 +62,12 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
   static const double _friction = 8.0;
   static const double _cursorRadius = 12.0;
   static const double _edgeScrollZone = 80.0;
-  static const double _edgeScrollSpeed = 400.0;
+  static const double _edgeScrollSpeed = 600.0;
+
+  // Remote keys that scroll a screenful, so a long page does not need the
+  // cursor dragged to the edge: page up / down and channel up / down.
+  static const _pageUpKeys = {92, 166};
+  static const _pageDownKeys = {93, 167};
   static const Duration _hideDelay = Duration(seconds: 2);
 
   @override
@@ -232,6 +241,13 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
         }
         break;
       default:
+        if (isDown && _pageUpKeys.contains(keyCode)) {
+          _resetHideTimer();
+          unawaited(_injectScroll(-_viewportSize.height * 0.85, _position));
+        } else if (isDown && _pageDownKeys.contains(keyCode)) {
+          _resetHideTimer();
+          unawaited(_injectScroll(_viewportSize.height * 0.85, _position));
+        }
         return;
     }
 
@@ -361,8 +377,7 @@ class _GlobalCursorOverlayState extends State<GlobalCursorOverlay>
       debugPrint(
           'GlobalCursorOverlay: _injectScroll deltaY=$deltaY at=$cursorPosition');
       final callback = GlobalCursorOverlay._webViewScrollCallback;
-      if (callback != null) {
-        await callback(deltaY, cursorPosition);
+      if (callback != null && await callback(deltaY, cursorPosition)) {
         return;
       }
 

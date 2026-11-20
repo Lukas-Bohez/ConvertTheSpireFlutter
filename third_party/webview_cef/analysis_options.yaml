@@ -1,0 +1,4 @@
+# Vendored from webview_cef 0.6.2 and kept as upstream wrote it, so it is not
+# held to this project's style rules (webview_windows has its own file too).
+linter:
+  rules: {}

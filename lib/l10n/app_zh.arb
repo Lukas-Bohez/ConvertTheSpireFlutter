@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "此会话中无法使用扩展：另一个应用实例先打开了浏览器。请关闭所有实例后重新启动应用。",
   "extensionLabel": "此扩展",
   "firefoxExtensionsRunHereWhen": "Firefox 扩展如果同时支持 Chromium，就能在这里运行。应用会在下载后检查，不支持时会告诉你。",
+  "extensionsRunPageScriptsHere": "在此设备上，扩展会运行它添加到网页中的脚本和样式，并保存自己的设置。它的工具栏弹出窗口、后台任务和网络拦截需要桌面浏览器引擎，Windows 应用中具备该引擎。",
   "more3": " 等",
   "installedFromFile": "从文件安装",
   "today": "今天",

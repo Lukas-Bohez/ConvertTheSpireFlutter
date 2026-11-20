@@ -7,6 +7,8 @@
 
 #include <cstring>
 
+#include <webview_cef/webview_cef_plugin.h>
+
 #include "flutter/generated_plugin_registrant.h"
 
 struct _MyApplication {
@@ -102,6 +104,9 @@ static void my_application_activate(GApplication* application) {
       project, self->dart_entrypoint_arguments);
 
   FlView* view = fl_view_new(project);
+  // The browser page (CEF) gets the keyboard through the runner.
+  g_signal_connect(view, "key_press_event", G_CALLBACK(processKeyEventForCEF), nullptr);
+  g_signal_connect(view, "key_release_event", G_CALLBACK(processKeyEventForCEF), nullptr);
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
   // for transparent.

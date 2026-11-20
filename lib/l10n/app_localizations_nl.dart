@@ -4058,6 +4058,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Firefox-extensies werken hier als ze ook Chromium ondersteunen. De app controleert dat na het downloaden en laat het weten als dat niet zo is.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'Op dit toestel voert een extensie de scripts en stijlen uit die ze aan webpagina\'s toevoegt, en ze bewaart haar instellingen. Haar pop-up in de werkbalk, achtergrondwerk en netwerkblokkering hebben een desktopbrowser-engine nodig; de Windows-app heeft die.';
+
+  @override
   String get more3 => ' en meer';
 
   @override

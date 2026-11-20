@@ -1776,6 +1776,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.0"
+  webview_cef:
+    dependency: "direct main"
+    description:
+      path: "third_party/webview_cef"
+      relative: true
+    source: path
+    version: "0.6.2+linux"
   webview_flutter:
     dependency: transitive
     description:

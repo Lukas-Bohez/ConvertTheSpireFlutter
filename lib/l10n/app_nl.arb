@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "Extensies zijn niet beschikbaar in deze sessie: een andere instantie van de app had de browser eerder geopend. Sluit alle instanties en start de app opnieuw.",
   "extensionLabel": "deze extensie",
   "firefoxExtensionsRunHereWhen": "Firefox-extensies werken hier als ze ook Chromium ondersteunen. De app controleert dat na het downloaden en laat het weten als dat niet zo is.",
+  "extensionsRunPageScriptsHere": "Op dit toestel voert een extensie de scripts en stijlen uit die ze aan webpagina's toevoegt, en ze bewaart haar instellingen. Haar pop-up in de werkbalk, achtergrondwerk en netwerkblokkering hebben een desktopbrowser-engine nodig; de Windows-app heeft die.",
   "more3": " en meer",
   "installedFromFile": "geïnstalleerd uit een bestand",
   "today": "Vandaag",

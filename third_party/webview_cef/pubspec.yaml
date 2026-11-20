@@ -1,0 +1,22 @@
+name: webview_cef
+description: >-
+  Flutter desktop webview backed by CEF (Chromium Embedded Framework),
+  vendored from webview_cef 0.6.2 (Apache-2.0) for Linux only. The upstream
+  package also registers on Windows and macOS, where it would download and
+  ship a copy of Chromium next to the system webview the app already uses.
+version: 0.6.2+linux
+publish_to: none
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      linux:
+        pluginClass: WebviewCefPlugin

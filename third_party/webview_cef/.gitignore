@@ -1,0 +1,3 @@
+# CEF (Chromium) is downloaded here by the first Linux build (third/download.cmake).
+third/cef/
+third/prebuilt.zip

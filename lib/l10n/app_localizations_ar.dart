@@ -4013,6 +4013,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعمل إضافات Firefox هنا إذا كانت تدعم Chromium أيضًا. يتحقق التطبيق من ذلك بعد التنزيل ويخبرك إن لم تكن كذلك.';
 
   @override
+  String get extensionsRunPageScriptsHere =>
+      'على هذا الجهاز تشغّل الإضافة السكربتات والأنماط التي تضيفها إلى صفحات الويب وتحتفظ بإعداداتها. أما نافذتها المنبثقة في شريط الأدوات وعملها في الخلفية وحظر الشبكة فتحتاج إلى محرك متصفح لسطح المكتب، وهو متوفر في تطبيق Windows.';
+
+  @override
   String get more3 => ' والمزيد';
 
   @override

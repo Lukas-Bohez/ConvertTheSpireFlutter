@@ -1184,6 +1184,7 @@
   "extensionsUnavailableSessionAnotherCopy": "이 세션에서는 확장 프로그램을 쓸 수 없습니다. 다른 앱 창이 먼저 브라우저를 열었습니다. 모든 창을 닫고 앱을 다시 실행하세요.",
   "extensionLabel": "이 확장 프로그램",
   "firefoxExtensionsRunHereWhen": "Firefox 확장 프로그램은 Chromium도 지원하면 여기서 작동합니다. 앱이 다운로드 후 확인하고, 지원하지 않으면 알려 줍니다.",
+  "extensionsRunPageScriptsHere": "이 기기에서는 확장 프로그램이 웹페이지에 추가하는 스크립트와 스타일이 실행되고 설정도 저장됩니다. 툴바 팝업, 백그라운드 작업, 네트워크 차단에는 데스크톱 브라우저 엔진이 필요하며, Windows 앱에 들어 있습니다.",
   "more3": " 등",
   "installedFromFile": "파일에서 설치됨",
   "today": "오늘",
