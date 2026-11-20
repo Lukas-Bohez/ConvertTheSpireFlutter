@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="51.20" y1="51.20" x2="460.80" y2="460.80" gradientUnits="userSpaceOnUse"><stop offset="0.0" stop-color="#1F5BD8"/><stop offset="0.55" stop-color="#1497B8"/><stop offset="1.0" stop-color="#25C48C"/></linearGradient>
+    <clipPath id="t"><rect x="51.20" y="51.20" width="409.60" height="409.60" rx="98.30"/></clipPath>
+  </defs>
+  <rect x="51.20" y="51.20" width="409.60" height="409.60" rx="98.30" fill="url(#g)"/>
+  <g clip-path="url(#t)"><path d="M30.72 354.71 L51.20 354.71 C136.40 314.98 202.75 396.49 297.78 356.35 C392.40 316.62 421.07 316.62 468.99 341.20 L481.28 341.20 L481.28 481.28 L30.72 481.28 Z" fill="#fff" fill-opacity="0.14"/><path d="M30.72 396.49 L51.20 396.49 C145.82 362.09 222.00 436.22 316.62 396.49 C411.65 356.35 430.49 373.56 468.99 385.02 L481.28 385.02 L481.28 481.28 L30.72 481.28 Z" fill="#fff" fill-opacity="0.12"/></g>
+  <path d="M208.49 165.07 L208.49 316.62 L339.56 240.84 Z" fill="#fff" stroke="#fff" stroke-width="41.78" stroke-linejoin="round"/>
+  <path d="M241.25 194.56 L260.92 194.56 L260.92 243.71 L284.88 243.71 L251.08 282.62 L217.29 243.71 L241.25 243.71 Z" fill="#1677C8"/>
+</svg>

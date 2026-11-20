@@ -170,6 +170,13 @@ class WebviewController extends ValueNotifier<WebviewValue> {
   Stream<bool> get containsFullScreenElementChanged =>
       _containsFullScreenElementChangedStreamController.stream;
 
+  final StreamController<WebviewRemoteKey> _remoteKeyStreamController =
+      StreamController<WebviewRemoteKey>.broadcast();
+
+  /// Arrow and Page Up/Down keys pressed while the page has the keyboard,
+  /// taken from the page while [setRemoteKeys] is on.
+  Stream<WebviewRemoteKey> get remoteKeys => _remoteKeyStreamController.stream;
+
   WebviewController() : super(WebviewValue.uninitialized());
 
   /// Initializes the underlying platform view.
@@ -221,6 +228,11 @@ class WebviewController extends ValueNotifier<WebviewValue> {
             } catch (ex) {
               _webMessageStreamController.addError(ex);
             }
+            break;
+          case 'remoteKey':
+            final value = map['value'] as Map<dynamic, dynamic>;
+            _remoteKeyStreamController.add(WebviewRemoteKey(
+                value['key'] as int, value['down'] as bool));
             break;
           case 'containsFullScreenElementChanged':
             _containsFullScreenElementChangedStreamController.add(map['value']);
@@ -624,6 +636,16 @@ class WebviewController extends ValueNotifier<WebviewValue> {
         <String, dynamic>{'button': button.index, 'isDown': isDown});
   }
 
+  /// While on, arrow and Page Up/Down keys pressed in the page go to
+  /// [remoteKeys] instead of the page.
+  Future<void> setRemoteKeys(bool enabled) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    return _methodChannel.invokeMethod('setRemoteKeys', enabled);
+  }
+
   /// Sets the horizontal and vertical scroll delta.
   Future<void> _setScrollDelta(double dx, double dy) async {
     if (_isDisposed) {
@@ -631,6 +653,16 @@ class WebviewController extends ValueNotifier<WebviewValue> {
     }
     assert(value.isInitialized);
     return _methodChannel.invokeMethod('setScrollDelta', [dx, dy]);
+  }
+
+  /// A real left click at [position], in logical pixels from the web
+  /// view's top-left corner. The mouse's own position in the page stays.
+  Future<void> tapAt(Offset position) async {
+    if (_isDisposed) {
+      return;
+    }
+    assert(value.isInitialized);
+    return _methodChannel.invokeMethod('tapAt', [position.dx, position.dy]);
   }
 
   /// Sets the surface size to the provided [size].
@@ -726,10 +758,15 @@ class _WebviewState extends State<Webview> {
                     onPointerHover: (ev) {
                       // ev.kind is for whatever reason not set to touch
                       // even on touch input
-                      if (_pointerKind == PointerDeviceKind.touch) {
+                      if (_pointerKind == PointerDeviceKind.touch &&
+                          ev.kind != PointerDeviceKind.mouse) {
                         // Ignoring hover events on touch for now
                         return;
                       }
+                      // A real mouse again after a touch (the app's
+                      // TV-remote cursor taps as touch): follow it, or the
+                      // page stopped seeing the mouse until its next click.
+                      _pointerKind = ev.kind;
                       _controller._setCursorPos(ev.localPosition);
                     },
                     onPointerDown: (ev) {
@@ -821,6 +858,14 @@ class _WebviewState extends State<Webview> {
     super.dispose();
     _cursorSubscription?.cancel();
   }
+}
+
+/// A remote-control key from the page: a Windows virtual-key code
+/// (VK_LEFT = 0x25 ... VK_DOWN = 0x28, VK_PRIOR = 0x21, VK_NEXT = 0x22).
+class WebviewRemoteKey {
+  const WebviewRemoteKey(this.virtualKey, this.isDown);
+  final int virtualKey;
+  final bool isDown;
 }
 
 /// An extension installed in a WebView2 profile.

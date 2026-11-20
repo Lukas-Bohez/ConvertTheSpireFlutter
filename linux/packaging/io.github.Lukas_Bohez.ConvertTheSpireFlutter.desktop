@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Convert the Spire Reborn
+GenericName=Media player and downloader
+Comment=Play and download music and videos
+Exec=convert_the_spire_reborn %U
+Icon=io.github.Lukas_Bohez.ConvertTheSpireFlutter
+Terminal=false
+Categories=AudioVideo;Audio;Video;Player;
+Keywords=music;video;player;download;converter;torrent;playlist;subtitles;cast;
+MimeType=x-scheme-handler/magnet;application/x-bittorrent;audio/mpeg;audio/mp4;audio/x-m4a;audio/flac;audio/x-flac;audio/wav;audio/x-wav;audio/ogg;audio/x-vorbis+ogg;audio/opus;audio/x-opus+ogg;audio/aac;audio/x-ms-wma;video/mp4;video/x-matroska;video/x-msvideo;video/webm;video/quicktime;video/x-ms-wmv;video/x-flv;video/x-m4v;
+StartupWMClass=io.github.Lukas_Bohez.ConvertTheSpireFlutter
+StartupNotify=true

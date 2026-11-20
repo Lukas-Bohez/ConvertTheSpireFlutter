@@ -38,11 +38,13 @@ constexpr auto kMethodSetCursorPos = "setCursorPos";
 constexpr auto kMethodSetPointerUpdate = "setPointerUpdate";
 constexpr auto kMethodSetPointerButton = "setPointerButton";
 constexpr auto kMethodSetScrollDelta = "setScrollDelta";
+constexpr auto kMethodTapAt = "tapAt";
 constexpr auto kMethodSetUserAgent = "setUserAgent";
 constexpr auto kMethodSetRequestBlocking = "setRequestBlocking";
 constexpr auto kMethodSetRequestBlockRules = "setRequestBlockRules";
 constexpr auto kMethodSetBackgroundColor = "setBackgroundColor";
 constexpr auto kMethodSetZoomFactor = "setZoomFactor";
+constexpr auto kMethodSetRemoteKeys = "setRemoteKeys";
 constexpr auto kMethodOpenDevTools = "openDevTools";
 constexpr auto kMethodSuspend = "suspend";
 constexpr auto kMethodResume = "resume";
@@ -394,6 +396,20 @@ void WebviewBridge::RegisterEventHandlers() {
         OnPermissionRequested(url, kind, is_user_initiated, completer);
       });
 
+  webview_->OnRemoteKey([this](uint32_t key, bool is_down) {
+    const auto event = flutter::EncodableValue(flutter::EncodableMap{
+        {flutter::EncodableValue(kEventType),
+         flutter::EncodableValue("remoteKey")},
+        {flutter::EncodableValue(kEventValue),
+         flutter::EncodableValue(flutter::EncodableMap{
+             {flutter::EncodableValue("key"),
+              flutter::EncodableValue(static_cast<int32_t>(key))},
+             {flutter::EncodableValue("down"), flutter::EncodableValue(is_down)},
+         })},
+    });
+    EmitEvent(event);
+  });
+
   webview_->OnContainsFullScreenElementChanged(
       [this](bool contains_fullscreen_element) {
         const auto event = flutter::EncodableValue(flutter::EncodableMap{
@@ -478,6 +494,16 @@ void WebviewBridge::HandleMethodCall(
     const auto delta = GetPointFromArgs(method_call.arguments());
     if (delta) {
       webview_->SetScrollDelta(delta->first, delta->second);
+      return result->Success();
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // tapAt: [double x, double y]
+  if (method_name.compare(kMethodTapAt) == 0) {
+    const auto point = GetPointFromArgs(method_call.arguments());
+    if (point) {
+      webview_->TapAt(point->first, point->second);
       return result->Success();
     }
     return result->Error(kErrorInvalidArgs);
@@ -829,6 +855,15 @@ void WebviewBridge::HandleMethodCall(
       }
       return result->Error(kErrorNotSupported,
                            "Setting the background color failed.");
+    }
+    return result->Error(kErrorInvalidArgs);
+  }
+
+  // setRemoteKeys: bool
+  if (method_name.compare(kMethodSetRemoteKeys) == 0) {
+    if (const auto enabled = std::get_if<bool>(method_call.arguments())) {
+      webview_->SetRemoteKeysEnabled(*enabled);
+      return result->Success();
     }
     return result->Error(kErrorInvalidArgs);
   }

@@ -110,6 +110,48 @@ void main() {
     });
   });
 
+  group('BrowserWindowsWebViewAdapter setup', () {
+    test(
+        'a page loaded while the web view is still being set up waits for '
+        'the setup: the document-start scripts go in first', () async {
+      final factory = _FactoryCounter(_InitGate(failPersistently: false));
+      final adapter = BrowserWindowsWebViewAdapter(
+        controllerFactory: () {
+          final c = factory.make() as _FakeWebviewController;
+          // The first attempt fails (the gate), the retry is the one used.
+          c.userAgentGate = Completer<void>();
+          return c;
+        },
+      );
+      final setup = adapter.debugEnsureReady();
+      // On until the controller exists and the setup is held up after it
+      // (setting the user agent, a busy PC).
+      _FakeWebviewController? used;
+      for (var i = 0; i < 200 && used == null; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        used = factory.controllers
+            .where((c) => c.value.isInitialized && c.userAgentPending)
+            .firstOrNull;
+      }
+      expect(used, isNotNull, reason: 'the setup reached the user agent');
+
+      final load = adapter.loadUrl('https://example.org/');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(used!.calls, isNot(contains('load https://example.org/')),
+          reason: 'the page waits for the setup');
+
+      used.userAgentGate!.complete();
+      await setup;
+      await load;
+      final script = used.calls.indexOf('document script');
+      final page = used.calls.indexOf('load https://example.org/');
+      expect(script, isNonNegative);
+      expect(page, greaterThan(script),
+          reason: 'the Enter capture and the bridge are in before the page');
+      await adapter.dispose();
+    });
+  });
+
   group('BrowserWindowsWebViewAdapter userscripts', () {
     test('runs matching userscripts at document start and end', () async {
       // The adapter used to ignore this hook, so userscripts never ran on
@@ -250,12 +292,30 @@ class _FakeWebviewController extends WebviewController {
   Future<void> setPopupWindowPolicy(
       WebviewPopupWindowPolicy popupPolicy) async {}
 
-  @override
-  Future<void> setUserAgent(String userAgent) async {}
+  /// When set, setting the user agent waits for it (a slow setup).
+  Completer<void>? userAgentGate;
+  bool userAgentPending = false;
+
+  /// What the adapter did with this controller, in order.
+  final List<String> calls = [];
 
   @override
-  Future<ScriptID?> addScriptToExecuteOnDocumentCreated(String script) async =>
-      null;
+  Future<void> setUserAgent(String userAgent) async {
+    userAgentPending = true;
+    await userAgentGate?.future;
+    userAgentPending = false;
+  }
+
+  @override
+  Future<ScriptID?> addScriptToExecuteOnDocumentCreated(String script) async {
+    calls.add('document script');
+    return null;
+  }
+
+  @override
+  Future<void> loadUrl(String url) async {
+    calls.add('load $url');
+  }
 
   /// Every script the adapter asked the page to run.
   final List<String> executed = [];

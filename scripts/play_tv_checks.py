@@ -31,8 +31,8 @@ BANNER_SIZES = {"mdpi": (160, 90), "hdpi": (240, 135), "xhdpi": (320, 180),
 ICON_SIZES = {"ldpi": 60, "mdpi": 80, "hdpi": 120, "xhdpi": 160,
               "xxhdpi": 240, "xxxhdpi": 320}
 
-# How much of the icon the logo must span, across and down. The rejected
-# icon's logo spanned 68% of it; the current one spans 85%.
+# How much of the legacy icon the logo must span, across and down. The
+# rejected icon's logo spanned 68% of it; the current icon is edge to edge.
 MIN_LOGO_SPAN = 0.8
 
 
@@ -97,18 +97,22 @@ def check_tv_graphics(z, res, check):
     check(f"{res}mipmap-anydpi-v26/ic_launcher.xml" in names,
           "adaptive icon present")
     foreground = image(f"{res}mipmap-xhdpi-v4/ic_launcher_foreground.png")
+    background = image(f"{res}mipmap-xhdpi-v4/ic_launcher_background.png")
     check(foreground is not None, "adaptive icon foreground present")
-    if foreground is not None:
-        # Launchers show the centre 72dp of the 108dp layer.
-        visible = foreground.width * 72 / 108
-        across, down = (s * foreground.width / visible
-                        for s in logo_span(foreground))
-        check(min(across, down) >= MIN_LOGO_SPAN,
-              f"logo fills the adaptive icon: spans {across:.0%} x {down:.0%} "
-              f"of what shows, at least {MIN_LOGO_SPAN:.0%}")
-        check(max(across, down) <= 1.0,
-              f"logo is not cut off in the adaptive icon: spans "
-              f"{max(across, down):.0%} of what shows, at most 100%")
+    check(background is not None, "adaptive icon background image present")
+    if foreground is not None and background is not None:
+        # Launchers show the centre 72dp of the 108dp layers. The background
+        # is the whole tile, so the icon fills the space edge to edge; the
+        # play button in front stays inside the 66dp every mask keeps.
+        fg = foreground.convert("RGBA")
+        bg = background.convert("RGBA")
+        check(bg.getchannel("A").getextrema()[0] == 255,
+              "adaptive background is opaque: the icon fills its space")
+        visible = fg.width * 72 / 108
+        across, down = (s * fg.width / visible for s in logo_span(fg))
+        check(0.3 <= min(across, down) and max(across, down) <= 66 / 72,
+              f"play button inside the safe zone: spans {across:.0%} x "
+              f"{down:.0%} of what shows, between 30% and {66 / 72:.0%}")
 
 
 def find_aapt2(explicit):

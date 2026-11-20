@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata for the Linux packages (Flathub, software centres). -->
+<component type="desktop-application">
+  <id>io.github.Lukas_Bohez.ConvertTheSpireFlutter</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+
+  <name>Convert the Spire Reborn</name>
+  <summary>Play and download music and videos</summary>
+  <developer id="io.github.lukas_bohez">
+    <name>Oroka Conner</name>
+  </developer>
+
+  <description>
+    <p>
+      A music and video player that also fills your library: download songs, videos
+      and whole playlists from more than 1,800 sites, open torrents and magnet links,
+      and convert files to the format you need.
+    </p>
+    <p>
+      The player has subtitles, lyrics, loops of the part you want and a large view.
+      Compare checks a playlist against your folder and fetches only the songs you
+      are missing, and watched playlists keep themselves up to date.
+    </p>
+    <p>
+      A built-in browser with Chrome and Firefox extensions, casting to a TV and a
+      layout that works with a TV remote complete it. It is available in 18 languages.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.Lukas_Bohez.ConvertTheSpireFlutter.desktop</launchable>
+
+  <url type="homepage">https://github.com/Lukas-Bohez/ConvertTheSpireFlutter</url>
+  <url type="bugtracker">https://github.com/Lukas-Bohez/ConvertTheSpireFlutter/issues</url>
+  <url type="vcs-browser">https://github.com/Lukas-Bohez/ConvertTheSpireFlutter</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#9ad8ec</color>
+    <color type="primary" scheme_preference="dark">#13427f</color>
+  </branding>
+
+  <content_rating type="oars-1.1"/>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Player</category>
+  </categories>
+  <keywords>
+    <keyword>music</keyword>
+    <keyword>video</keyword>
+    <keyword>download</keyword>
+    <keyword>converter</keyword>
+    <keyword>torrent</keyword>
+    <keyword>playlist</keyword>
+  </keywords>
+
+  <provides>
+    <binary>convert_the_spire_reborn</binary>
+    <mediatype>application/x-bittorrent</mediatype>
+    <mediatype>x-scheme-handler/magnet</mediatype>
+  </provides>
+
+  <releases>
+    <release version="16.4.1" date="2026-11-20">
+      <description>
+        <p>
+          The mouse wheel scrolls web pages in the browser again, and the arrow keys
+          move the remote-control cursor even after a page was clicked. The remote's
+          OK clicks like a real mouse click, where the cursor is. The app has a new
+          icon.
+        </p>
+      </description>
+    </release>
+    <release version="16.4.0" date="2026-11-20">
+      <description>
+        <p>
+          The browser works on Linux, with Chromium inside the app, and Chrome and
+          Firefox extensions add to web pages here too. Scrolling with a TV remote
+          now works on every page.
+        </p>
+      </description>
+    </release>
+  </releases>
+</component>

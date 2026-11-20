@@ -45,12 +45,15 @@ the banner is `mipmap-<density>/banner.png` from 160x90 (mdpi) to 640x360
 review rejects the TV app as having "no full-size app banner and/or icon" when
 they are smaller, and the banner shows only the logo and the app name.
 
-The icons are the logo on white, as large as it goes without a round mask
-clipping the music note. The logo was drawn for white; on anything else it
-looked wrong on Android. Play review turned down the logo sitting small in a
-wide margin ("Your icon does not fill the entire icon space"), so it spans at
-least 80% of every icon; CI checks that. The same goes for `app-icon-512.png`,
-so upload it in Play Console along with the new build.
+The app icon (a play button with a download arrow, riding two waves on a
+blue-to-green tile) is drawn by `python scripts/make_app_icons.py`, which
+writes the logo, the launcher icons of all three Android flavors, the Windows
+`.ico`, the Linux/Flathub SVG and PNGs and `assets/icons/full-bleed-1024.png`.
+Run it before this script when the icon changes. The launcher icon fills its
+whole space: Play review turned down an earlier logo sitting small in a wide
+margin ("Your icon does not fill the entire icon space"); CI checks the icon
+and the adaptive layers (`scripts/play_tv_checks.py`). Upload the new
+`app-icon-512.png` in Play Console along with the build that has the new icon.
 
 Only the banners and screenshots have text. The icons can be regenerated on any
 OS; the text needs the Windows fonts to look right.
@@ -60,13 +63,12 @@ then check it with `python scripts/verify_play_aab.py <aab>` (see the
 [Play AAB build guide](../../docs/build/play-store-aab.md)).
 
 ## Where the source material lives
-- **Logo (source of truth):** `assets/icons/bitplayer-source-1024.png`
+- **Logo (source of truth):** `scripts/make_app_icons.py` (it writes `assets/icons/app-icon.svg` and the PNGs)
 - **Real app screenshots:** `screenshots/*.webp`
-- **Windows/desktop app icon:** `assets/icons/app_icon_fixed.png` (via `flutter_launcher_icons.yaml`)
+- **Windows/desktop app icon:** `assets/icons/app_icon_fixed.png` (MSIX) and `windows/runner/resources/app_icon.ico`, both from `make_app_icons.py`
 - **GitHub release layout:** `docs/releases/release_body_template.md`
 - **Trailer (the Windows app):** https://youtu.be/JfT052dU5mg
 
 ## Not covered here
-The GitHub (full) flavor keeps its own launcher icon, the orb of the Windows app,
-in `android/app/src/full/res/`; `python scripts/generate_full_icons.py` makes it,
-on white, from `assets/icons/app_icon.ico`.
+The GitHub (full) flavor has the same launcher icon, in `android/app/src/full/res/`;
+`make_app_icons.py` writes it too.

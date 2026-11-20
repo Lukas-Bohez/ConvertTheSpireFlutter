@@ -138,7 +138,7 @@ void main() {
       expect(entry, contains('Icon=/home/me/.local/share/app/app_icon.png'));
       expect(entry, startsWith('[Desktop Entry]\nType=Application\n'));
       expect(entry,
-          contains('StartupWMClass=com.example.convert_the_spire_reborn'));
+          contains('StartupWMClass=io.github.Lukas_Bohez.ConvertTheSpireFlutter'));
     });
 
     test('offers the app for what it opens on the other platforms', () {

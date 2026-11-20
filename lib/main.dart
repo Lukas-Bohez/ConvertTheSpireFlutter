@@ -17,6 +17,7 @@ import 'src/config/flavor.dart';
 import 'src/config/full_mode_access.dart';
 import 'src/services/ad_service.dart';
 import 'src/services/error_log.dart';
+import 'src/services/linux_app_id.dart';
 import 'src/services/ms_store_service.dart';
 import 'src/services/open_request_service.dart';
 import 'src/services/purchase_service.dart';
@@ -45,6 +46,10 @@ Future<void> main() async {
     // Ensure bindings are initialized in the same zone that runs runApp.
     // This avoids `Zone mismatch` errors from Flutter.
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Linux: the data folder follows the app's new id (16.4.1); before
+    // anything reads settings from it.
+    await moveLinuxDataToNewAppId();
 
     // Files and links the app was started for (or is sent later): taken
     // from the platform now, handled by the home screen once it is up.
