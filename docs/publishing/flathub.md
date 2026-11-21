@@ -56,11 +56,10 @@ In a Flatpak these install as:
 
 ## Still to decide or do
 
-1. **The name.** Flathub's quality guidelines want a name of at most 15
-   characters and under 20 in any case. "Convert the Spire Reborn" is 24.
-   Choose a shorter one (for example "BitPlayer", the Play Store name) and
-   put it in `<name>` in the metainfo and `Name=` in the desktop file, or
-   expect the reviewers to ask.
+1. **The name.** Decided: "Convert The Spire" (17 characters; Flathub's
+   quality guidelines want a short name, under 20 in any case). It is the
+   `<name>` in the metainfo and `Name=` in the desktop file. The window title
+   (`linux/runner/my_application.cc`) still says "Convert the Spire Reborn".
 2. **Screenshots.** At least one is required, 3 to 6 is good. Take them on
    Linux (not Windows), of the app window only, with default settings, at
    1000x700 or smaller (2000x1400 on HiDPI). Put them in the repository, for

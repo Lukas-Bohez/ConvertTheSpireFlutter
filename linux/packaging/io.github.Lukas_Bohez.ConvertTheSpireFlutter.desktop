@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Convert the Spire Reborn
+Name=Convert The Spire
 GenericName=Media player and downloader
 Comment=Play and download music and videos
 Exec=convert_the_spire_reborn %U
